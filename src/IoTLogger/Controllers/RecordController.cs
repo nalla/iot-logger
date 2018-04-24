@@ -1,4 +1,4 @@
-﻿using IoTLogger.Models;
+using IoTLogger.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -19,14 +19,16 @@ namespace IoTLogger.Controllers
 			Configuration = configuration;
 		}
 
-		[HttpPost]
+		[HttpPost( "[action]" )]
 		[ProducesResponseType( 204 )]
 		[ProducesResponseType( 400 )]
-		public IActionResult Post( [FromHeader] string apiKey, [FromBody] Recording recording )
+		public IActionResult PostAirQuality( [FromHeader] string apiKey, [FromBody] AirQualityRecording recording )
 		{
 			if( Configuration["apiKey"] == apiKey )
 			{
-				Metrics.CreateGauge( recording.Name, "", nameof(recording.Location) ).Labels( recording.Location ).Set( recording.Value );
+				Metrics.CreateGauge( "temperature", "", "deviceid" ).Labels( recording.DeviceId ).Set( recording.Temperature );
+				Metrics.CreateGauge( "humidity", "", "deviceid" ).Labels( recording.DeviceId ).Set( recording.Humidity );
+				Metrics.CreateGauge( "heatindex", "", "deviceid" ).Labels( recording.DeviceId ).Set( recording.HeatIndex );
 				Logger.LogInformation( "{@recording}", recording );
 
 				return NoContent();
