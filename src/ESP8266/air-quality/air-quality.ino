@@ -12,7 +12,7 @@ const char* WIFI_SSID = "";
 const char* WIFI_PASS = "";
 const char* DEVICE_ID = "";
 const char* API_ENDPOINT = "";
-const char* API_KEY = "changeit";
+const char* API_KEY = "";
 
 WiFiClientSecure wifiClient;
 
@@ -67,12 +67,60 @@ void setup() {
   // Wait for serial to initialize.
   while(!Serial) { }
 
-  Serial.println("Device started");
+  Serial.println();
+  Serial.println("Device started.");
+  
   connect();
+  Serial.println("Device connected.");
+
+  readAndReport();
+
+  Serial.println("Going into deep sleep for 30 seconds.");
+  ESP.deepSleep(30e6); // 60e6 is 30 microseconds
+  delay(100);
+}
+
+void readAndReport() {
+  bool read = false;
+
+  while(!read) {
+    delay(400);
+    
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+    float f = dht.readTemperature(true);
+  
+    if (isnan(h) || isnan(t) || isnan(f)) {
+      Serial.println("Failed to read from DHT sensor!");
+    } else {
+      read = true;
+    }
+  
+    if (read) {
+      float hif = dht.computeHeatIndex(f, h);
+      float hic = dht.computeHeatIndex(t, h, false);
+    
+      Serial.print("Humidity: ");
+      Serial.print(h);
+      Serial.print(" %\t");
+      Serial.print("Temperature: ");
+      Serial.print(t);
+      Serial.print(" *C ");
+      Serial.print(f);
+      Serial.print(" *F\t");
+      Serial.print("Heat index: ");
+      Serial.print(hic);
+      Serial.print(" *C ");
+      Serial.print(hif);
+      Serial.println(" *F");
+      
+      report(t, h, hic);
+    }
+  }
 }
 
 void report(double t, double h, double hi) {
-  StaticJsonBuffer<500> jsonBuffer;
+  StaticJsonBuffer<600> jsonBuffer;
   JsonObject& root = jsonBuffer.createObject();
   root["deviceId"] = DEVICE_ID;
   root["temperature"] = t;
@@ -100,53 +148,7 @@ void report(double t, double h, double hi) {
   http.end();
 }
 
-int timeSinceLastRead = 0;
 void loop() {
-   bool toReconnect = false;
-
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("Disconnected from WiFi");
-    toReconnect = true;
-  }
-
-  if (toReconnect) {
-    connect();
-  }
-
-  // Report every 2 seconds.
-  if(timeSinceLastRead > 2000) {
-    float h = dht.readHumidity();
-    float t = dht.readTemperature();
-    float f = dht.readTemperature(true);
-
-    if (isnan(h) || isnan(t) || isnan(f)) {
-      Serial.println("Failed to read from DHT sensor!");
-      timeSinceLastRead = 0;
-      return;
-    }
-
-    float hif = dht.computeHeatIndex(f, h);
-    float hic = dht.computeHeatIndex(t, h, false);
-
-    Serial.print("Humidity: ");
-    Serial.print(h);
-    Serial.print(" %\t");
-    Serial.print("Temperature: ");
-    Serial.print(t);
-    Serial.print(" *C ");
-    Serial.print(f);
-    Serial.print(" *F\t");
-    Serial.print("Heat index: ");
-    Serial.print(hic);
-    Serial.print(" *C ");
-    Serial.print(hif);
-    Serial.println(" *F");
-    report(t, h, hic);
-    
-    timeSinceLastRead = 0;
-  }
-  delay(100);
-  timeSinceLastRead += 100;
 }
 
 
