@@ -1,40 +1,44 @@
+using System.Collections.Generic;
 using IoTLogger.Models;
+using IoTLogger.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Prometheus;
 
 namespace IoTLogger.Controllers
 {
-	[Route( "api/[controller]" )]
+	[Route("api/[controller]")]
 	public class RecordController : Controller
 	{
-		private IConfiguration Configuration { get; }
+		private readonly IConfiguration _configuration;
+		private readonly IEnumerable<IDataProcessor> _dataProcessors;
+		private readonly ILogger _logger;
 
-		private ILogger<RecordController> Logger { get; }
-
-		public RecordController( IConfiguration configuration, ILogger<RecordController> logger )
+		public RecordController(
+			IConfiguration configuration,
+			ILogger<RecordController> logger,
+			IEnumerable<IDataProcessor> dataProcessors)
 		{
-			Logger = logger;
-			Configuration = configuration;
+			_logger = logger;
+			_configuration = configuration;
+			_dataProcessors = dataProcessors;
 		}
 
-		[HttpPost( "[action]" )]
-		[ProducesResponseType( 204 )]
-		[ProducesResponseType( 400 )]
-		public IActionResult PostAirQuality( [FromHeader] string apiKey, [FromBody] AirQualityRecording recording )
+		[HttpPost("[action]")]
+		[ProducesResponseType(204)]
+		[ProducesResponseType(400)]
+		public IActionResult PostAirQuality([FromHeader] string apiKey, [FromBody] AirQualityRecording recording)
 		{
-			if( Configuration["apiKey"] == apiKey )
+			if (_configuration["apiKey"] == apiKey)
 			{
-				Metrics.CreateGauge( "temperature", "", "deviceid" ).Labels( recording.DeviceId ).Set( recording.Temperature );
-				Metrics.CreateGauge( "humidity", "", "deviceid" ).Labels( recording.DeviceId ).Set( recording.Humidity );
-				Metrics.CreateGauge( "heatindex", "", "deviceid" ).Labels( recording.DeviceId ).Set( recording.HeatIndex );
-				Logger.LogInformation( "{@recording}", recording );
+				foreach (var dataProcessor in _dataProcessors) dataProcessor.Process(recording);
+
+				_logger.LogInformation("{@recording}", recording);
 
 				return NoContent();
 			}
 
-			return BadRequest( "Invalid Api Key." );
+			return BadRequest("Invalid Api Key.");
 		}
 	}
 }
