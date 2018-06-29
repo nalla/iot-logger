@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Prometheus;
 
 namespace IoTLogger
 {
@@ -21,7 +20,6 @@ namespace IoTLogger
 		public void Configure(IApplicationBuilder app)
 		{
 			app.UseCors(nameof(CorsPolicy));
-			app.UseMetricServer();
 			app.UseStatusCodePages();
 			app.UseMvc();
 		}
@@ -29,7 +27,6 @@ namespace IoTLogger
 		// This method gets called by the runtime. Use this method to add services to the container.
 		public void ConfigureServices(IServiceCollection services)
 		{
-			services.AddSingleton<IDataProcessor, PrometheusProcessor>();
 			services.AddSingleton<IDataProcessor, InfluxdbProcessor>();
 			services.AddCors(cors => cors.AddPolicy(nameof(CorsPolicy), _configuration.GetSection(nameof(CorsPolicy)).Get<CorsPolicy>()));
 			services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
