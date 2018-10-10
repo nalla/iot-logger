@@ -9,11 +9,11 @@ namespace IoTLogger
 {
 	public class Startup
 	{
-		private readonly IConfiguration _configuration;
+		private readonly IConfiguration configuration;
 
 		public Startup(IConfiguration configuration)
 		{
-			_configuration = configuration;
+			this.configuration = configuration;
 		}
 
 		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -27,8 +27,9 @@ namespace IoTLogger
 		// This method gets called by the runtime. Use this method to add services to the container.
 		public void ConfigureServices(IServiceCollection services)
 		{
+			services.AddSingleton<IMedianGenerator, MedianGenerator>();
 			services.AddSingleton<IDataProcessor, InfluxdbProcessor>();
-			services.AddCors(cors => cors.AddPolicy(nameof(CorsPolicy), _configuration.GetSection(nameof(CorsPolicy)).Get<CorsPolicy>()));
+			services.AddCors(cors => cors.AddPolicy(nameof(CorsPolicy), configuration.GetSection(nameof(CorsPolicy)).Get<CorsPolicy>()));
 			services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 		}
 	}
